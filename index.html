@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CanyonGlow Lead Intake &amp; Approval Automation</title>
+<style>
+:root{--bg:#fbf8f4;--fg:#1f1b16;--muted:#6b625a;--card:#fff;--line:#e6ded4;--accent:#c2410c;--chip:#fdebdd}
+@media (prefers-color-scheme:dark){:root{--bg:#161310;--fg:#f3ede6;--muted:#a89f95;--card:#201c18;--line:#3a332c;--accent:#fb923c;--chip:#3a2a1d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:40px 20px 64px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 8px}
+h2{font-size:1.25rem;margin:40px 0 12px}
+p{margin:0 0 12px}
+.sub{color:var(--muted);font-size:1.05rem}
+.badge{display:inline-block;background:var(--chip);color:var(--accent);border-radius:999px;padding:2px 12px;font-size:.8rem;font-weight:600;margin-bottom:12px}
+.note{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin:20px 0}
+ol.flow{list-style:none;counter-reset:s;padding:0;margin:0;display:grid;gap:10px}
+ol.flow li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px 10px 48px;position:relative}
+ol.flow li::before{content:counter(s);position:absolute;left:12px;top:10px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.card h3{font-size:1rem;margin:0 0 4px}
+.card p{margin:0;color:var(--muted);font-size:.95rem}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+a{color:var(--accent)}
+.links a{display:inline-block;margin:0 10px 8px 0;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);text-decoration:none;font-weight:600}
+footer{margin-top:48px;color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Working prototype</span>
+  <h1>CanyonGlow Lead Intake &amp; Approval Automation</h1>
+  <p class="sub">An n8n workflow that captures fictional HVAC service enquiries, triages them with deterministic rules, uses an LLM only for language tasks, and keeps every customer message under human approval.</p>
+
+  <div class="note"><strong>Fictional demo.</strong> All data is made up. Results come from controlled test runs, not real customers. The public enquiry form is not included in this repo.</div>
+
+  <h2>How it works</h2>
+  <ol class="flow">
+    <li><strong>Receive:</strong> a form posts to an n8n webhook, which creates a submission ID.</li>
+    <li><strong>Validate:</strong> input is trimmed and normalized; required fields, formats and consent are checked. Unknown fields are rejected.</li>
+    <li><strong>Deduplicate:</strong> recent records are checked. Duplicates are flagged and kept, never deleted.</li>
+    <li><strong>Apply rules:</strong> service area and priority (high, medium, low) are set deterministically.</li>
+    <li><strong>Summarize:</strong> an LLM returns a short summary, missing information, confidence and a review reason as strict JSON. It cannot override the rules.</li>
+    <li><strong>Record:</strong> the lead is written to a Google Sheets register, with an audit log entry.</li>
+    <li><strong>Approve:</strong> a reviewer gets an email with one-time approve and reject links.</li>
+    <li><strong>Log:</strong> the approval workflow checks the token, updates the lead, logs the decision without personal data, and invalidates the link.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="grid">
+    <div class="card"><h3>Rules decide, AI assists</h3><p>Priority and service area never depend on the model.</p></div>
+    <div class="card"><h3>Human in the loop</h3><p>High-priority, uncertain, outside-area and pricing messages need approval.</p></div>
+    <div class="card"><h3>Safe fallback</h3><p>Invalid AI output or confidence below 0.75 routes the lead to manual review.</p></div>
+    <div class="card"><h3>One-time links</h3><p>An approval link works once. Reusing it returns “Link not found or expired”.</p></div>
+  </div>
+
+  <h2>What has been tested</h2>
+  <div class="scroll">
+  <table>
+    <tr><th>Area</th><th>Result</th></tr>
+    <tr><td>End-to-end intake</td><td>HTTP 202 response, classification, 30-field Sheet append, audit log and approval email on two test leads</td></tr>
+    <tr><td>AI step</td><td>Fallback path observed; successful JSON parsing verified in isolation</td></tr>
+    <tr><td>Approval workflow</td><td>Approve verified on two leads; token cleared; reused link rejected</td></tr>
+    <tr><td>Still to do</td><td>Error-queue branch, remaining exception cases, live-form test, measured metrics</td></tr>
+  </table>
+  </div>
+
+  <h2>Stack</h2>
+  <p>n8n &middot; Google Sheets &middot; Gmail &middot; OpenRouter (free-tier model)</p>
+
+  <h2>Explore the project</h2>
+  <p class="links">
+    <a href="https://github.com/abhinavpalleti19-cpu/canyonglow-lead">GitHub repository</a>
+    <a href="https://github.com/abhinavpalleti19-cpu/canyonglow-lead/blob/main/docs/architecture.md">Architecture</a>
+    <a href="https://github.com/abhinavpalleti19-cpu/canyonglow-lead/blob/main/docs/automation-spec.md">Specification</a>
+    <a href="https://github.com/abhinavpalleti19-cpu/canyonglow-lead/blob/main/docs/test-results.md">Test results</a>
+    <a href="https://github.com/abhinavpalleti19-cpu/canyonglow-lead/tree/main/workflows">Workflow JSON</a>
+  </p>
+
+  <footer>Built by Abhinav Palleti &middot; MIT licence</footer>
+</main>
+</body>
+</html>
